@@ -1,7 +1,19 @@
-All Rights Reserved.
+Copyright © 2025 Justin Tussing. All rights reserved.
 
-This software is the property of Justin Tussing.
-Unauthorized copying, distribution, modification, or use of this software,
-in whole or in part, is strictly prohibited without prior written permission.
+This software and associated documentation files (the "Software") are the
+exclusive property of Justin Tussing.
 
-© 2025 Justin Tussing. All rights reserved.
+Permission is granted to the designated recipient(s) only, for the sole purpose
+of accessing, evaluating, or using the Software as expressly authorized by
+Justin Tussing. 
+
+Any reproduction, redistribution, modification, public display, or sublicensing
+of the Software, in whole or in part, without prior written permission from
+Justin Tussing, is strictly prohibited.
+
+The Software is provided "AS IS," without warranty of any kind, express or
+implied, including but not limited to the warranties of merchantability,
+fitness for a particular purpose, and noninfringement. In no event shall
+Justin Tussing be liable for any claim, damages, or other liability,
+whether in an action of contract, tort, or otherwise, arising from, out of,
+or in connection with the Software or the use or other dealings in the Software.
