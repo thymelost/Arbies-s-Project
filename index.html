@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.2/dist/xlsx.full.min.js"></script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Arbie Schedule Generator (Validated)</title>
@@ -191,9 +192,33 @@ Ava Brown,Female,MRR,,x,,,x,,</pre>
       return dayOff;
     }
 
-    async function parseWorkbookFromFileInput(fileInput){
-      // Replace with your actual XLSX parser (SheetJS etc.)
-      throw new Error("Hook up XLSX parsing here");
+    // Reads the first worksheet and returns { headers: [...], dataRows: [[...], ...] }
+    async function parseWorkbookFromFileInput(fileInput) {
+      const file = fileInput.files?.[0];
+      if (!file) throw new Error("No file selected");
+    
+      // Read as ArrayBuffer for SheetJS
+      const data = await file.arrayBuffer();
+    
+      // Parse workbook
+      const wb = XLSX.read(data, { type: "array" });
+    
+      // Pick first visible sheet (or just first)
+      const sheetName = wb.SheetNames[0];
+      if (!sheetName) throw new Error("No worksheets found");
+      const ws = wb.Sheets[sheetName];
+    
+      // Convert to 2D array (header row preserved)
+      // raw = true keeps cell values as-is; defval = "" fills blanks
+      const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: "" });
+    
+      if (!aoa.length) throw new Error("Worksheet is empty");
+    
+      // First row = headers, remaining = data rows
+      const headers = aoa[0].map(h => (typeof h === "string" ? h.trim() : String(h).trim()));
+      const dataRows = aoa.slice(1);
+    
+      return { headers, dataRows };
     }
 
     function scheduleTwoWeeks(headers, dataRows, startDate){
