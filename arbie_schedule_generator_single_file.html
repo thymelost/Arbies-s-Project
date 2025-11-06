@@ -3,9 +3,23 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Arbie Schedule Generator (No‑Framework)</title>
+  <title>Arbie Schedule Generator (No-Framework)</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <!-- PWA hooks (Step 3) -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <script>
+    // Register a basic service worker to enable offline use after first load
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => {
+          console.warn('Service worker registration failed:', err);
+        });
+      });
+    }
+  </script>
+
   <style>
     :root {
       --bg: #f7f7f8;
@@ -40,10 +54,10 @@
 </head>
 <body>
   <div class="container">
-    <h1>Arbie Schedule Generator <span class="pill">No‑Framework</span></h1>
+    <h1>Arbie Schedule Generator <span class="pill">No-Framework</span></h1>
     <noscript style="color:#dc2626">JavaScript is required.</noscript>
     <div class="card">
-      <div class="muted" style="margin-bottom:8px">Reads your Excel and creates a two‑week schedule. Works on iPad Safari & Windows/Chrome.</div>
+      <div class="muted" style="margin-bottom:8px">Reads your Excel and creates a two-week schedule. Works on iPad Safari & Windows/Chrome.</div>
       <div class="row">
         <div>
           <label>Upload Excel (.xlsx/.xls)</label>
@@ -51,9 +65,9 @@
           <div id="fileLabel" class="muted" style="margin-top:6px"></div>
         </div>
         <div>
-          <label>Start date (YYYY‑MM‑DD)</label>
+          <label>Start date (YYYY-MM-DD)</label>
           <input id="date" type="date" />
-          <div class="muted" style="margin-top:6px">If no native date picker, enter YYYY‑MM‑DD.</div>
+          <div class="muted" style="margin-top:6px">If no native date picker, enter YYYY-MM-DD.</div>
         </div>
       </div>
 
@@ -118,7 +132,7 @@
     const $ = (id) => document.getElementById(id);
     const toLower = (v) => typeof v === 'string' ? v.trim().toLowerCase() : '';
     const pad2 = (n) => String(n).padStart(2,'0');
-    const fmt = (d) => (d instanceof Date && !isNaN(d)) ? `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}` : '';
+    const fmt = (d) => (d instanceof Date && !isNaN(d)) ? `${d.getFullYear()}-${d.getMonth()+1 < 9 ? '0' : ''}${d.getMonth()+1}-${d.getDate() < 10 ? '0' : ''}${d.getDate()}` : '';
     function addDays(d, n) { const x = new Date(d.getTime()); x.setDate(x.getDate() + n); return x; }
     function nextSundayDate(from = new Date()) { const day = from.getDay(); const delta = (7 - day) % 7; return addDays(from, delta); }
     function setStatus(msg, type) { const el = $('status'); el.textContent = msg; el.className = 'status ' + (type || 'muted'); }
