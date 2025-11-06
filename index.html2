@@ -1,0 +1,110 @@
+<script>
+/* ---- Normalization helpers ---- */
+const DAY_KEYS = ["mon","tue","wed","thu","fri","sat","sun"]; // internal keys
+const HEADER_ALIASES = {
+  "mon off":["mon off","monday off","mon_off","mon-off","off mon"],
+  "tue off":["tue off","tuesday off","tues off","tue_off","tue-off","off tue"],
+  "wed off":["wed off","wednesday off","weds off","wed_off","wed-off","off wed"],
+  "thu off":["thu off","thurs off","thursday off","thu_off","thu-off","off thu","off thurs"],
+  "fri off":["fri off","friday off","fri_off","fri-off","off fri"],
+  "sat off":["sat off","saturday off","sat_off","sat-off","off sat"],
+  "sun off":["sun off","sunday off","sun_off","sun-off","off sun"],
+  "employees":["employee","employees","name","full name"],
+  "sex":["sex","gender"],
+  "area":["area","section","assigned area"]
+};
+
+// Build a case-insensitive header map from a worksheet header row
+function buildHeaderMap(rawHeaders) {
+  const map = {};
+  const norm = s => String(s||"").trim().toLowerCase();
+  rawHeaders.forEach((h,i)=>{
+    const hNorm = norm(h);
+    // find canonical name
+    let canonical = null;
+    for (const [canon, aliases] of Object.entries(HEADER_ALIASES)) {
+      if (aliases.includes(hNorm)) { canonical = canon; break; }
+    }
+    if (!canonical) canonical = hNorm; // fall back to the normalized text
+    map[canonical] = i;
+  });
+  return map;
+}
+
+// Parse a cell as boolean OFF
+function parseOff(val) {
+  const s = String(val ?? "").trim().toLowerCase();
+  if (!s) return false;
+  // Accept a wide range of ways people mark time off
+  const truths = new Set(["x","off","true","yes","y","1"]);
+  if (truths.has(s)) return true;
+  // Also accept day-name entered in the cell (e.g., "Wed")
+  const dayWords = ["mon","tue","tues","wed","weds","thu","thur","thurs","fri","sat","sun","monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
+  if (dayWords.includes(s)) return true;
+  return false;
+}
+
+// From a row object, compute an easy dayOff map {mon:true/false,...}
+function getDayOffMap(row, headerMap) {
+  const dayOff = {};
+  const keyFor = (d) => `${d} off`; // canonical we used above
+  for (const d of DAY_KEYS) {
+    const colIndex = headerMap[keyFor(d)];
+    const val = colIndex != null ? row[colIndex] : "";
+    dayOff[d] = parseOff(val);
+  }
+  return dayOff;
+}
+
+/* ---- Example usage inside your scheduler ----
+   Assumes you've already loaded the XLSX and have:
+   - headers: array of header cell strings (first row)
+   - dataRows: array of row-arrays (each row matches headers by index)
+*/
+
+function scheduleTwoWeeks(headers, dataRows, startDate /* JS Date */) {
+  const headerMap = buildHeaderMap(headers);
+
+  // Build normalized employee objects
+  const employees = dataRows.map(r => {
+    const name = String(r[headerMap["employees"]] ?? r[headerMap["employee"]] ?? "").trim();
+    const sex = String(r[headerMap["sex"]] ?? "").trim().toLowerCase(); // "male"/"female"/etc.
+    const area = String(r[headerMap["area"]] ?? "").trim();
+    const dayOff = getDayOffMap(r, headerMap);
+    return { name, sex, area, dayOff };
+  });
+
+  // Generate 14 days starting at startDate
+  const out = [];
+  for (let i=0;i<14;i++){
+    const d = new Date(startDate);
+    d.setDate(d.getDate()+i);
+    const dayKey = DAY_KEYS[d.getDay()===0 ? 6 : d.getDay()-1]; // Mon=0..Sun=6
+    const dayAssignments = [];
+
+    // Example assignment pass: only consider employees not off today
+    for (const emp of employees) {
+      if (emp.dayOff[dayKey]) {
+        // Skip assigning this employee today — THIS is the critical guard.
+        continue;
+      }
+      // ... your logic to choose section here ...
+      // dayAssignments.push({ name: emp.name, section: chosenSection });
+    }
+
+    out.push({ date: d.toISOString().slice(0,10), assignments: dayAssignments });
+  }
+  return out;
+}
+
+/* ---- Wire-up example to your "Process" button ---- */
+document.getElementById('process')?.addEventListener('click', async () => {
+  // Make sure you already parsed the XLSX into headers + dataRows
+  // Example placeholders below:
+  // const {headers, dataRows} = await parseWorkbookFromFileInput(document.getElementById('file'));
+  // const start = new Date(document.getElementById('date').value);
+
+  // const result = scheduleTwoWeeks(headers, dataRows, start);
+  // then render or export to XLSX...
+});
+</script>
