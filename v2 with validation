@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Arbie Schedule Generator (Validated)</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => {
+          console.warn('Service worker registration failed:', err);
+        });
+      });
+    }
+  </script>
+
+  <style>
+    :root {
+      --bg: #f7f7f8;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --text: #111827;
+      --muted: #6b7280;
+      --accent: #2563eb;
+      --success: #16a34a;
+      --danger: #dc2626;
+      --warn: #b45309;
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background: var(--bg); color: var(--text); }
+    .container { max-width: 920px; padding: 24px; margin: 0 auto; }
+    h1 { font-size: 22px; margin: 0 0 16px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); padding: 18px; margin: 14px 0; }
+    label { font-size: 13px; display: block; margin: 0 0 6px; color: var(--muted); }
+    input[type="file"], input[type="date"], input[type="text"] { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: #fff; font-size: 14px; }
+    .row { display: grid; grid-template-columns: 1fr; gap: 14px; }
+    @media (min-width: 640px) { .row { grid-template-columns: 1fr 1fr; } }
+    .switch { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .btn { appearance: none; border: none; outline: none; cursor: pointer; padding: 10px 14px; border-radius: 10px; background: var(--accent); color: white; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .status { font-size: 14px; margin-left: 10px; white-space: pre-line; }
+    .status.ok { color: var(--success); }
+    .status.err { color: var(--danger); }
+    .status.warn { color: var(--warn); }
+    .status.muted { color: var(--muted); }
+    .footer { color: var(--muted); font-size: 12px; margin-top: 10px; }
+    .pill { display: inline-block; background: #eef2ff; color: #3730a3; padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+
+    .issues { margin-top: 10px; border: 1px dashed var(--border); border-radius: 12px; padding: 10px; max-height: 220px; overflow: auto; font-size: 13px; }
+    .issues h4 { margin: 0 0 8px; font-size: 13px; color: #111827; }
+    .issues ul { margin: 0; padding-left: 18px; }
+    .issues li { margin: 2px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Arbie Schedule Generator <span class="pill">Validated</span></h1>
+    <noscript style="color:#dc2626">JavaScript is required.</noscript>
+
+    <div class="card">
+      <div class="muted" style="margin-bottom:8px">Reads your Excel and creates a two-week schedule. Works on iPad Safari & Windows/Chrome.</div>
+      <div class="row">
+        <div>
+          <label>Upload Excel (.xlsx/.xls)</label>
+          <input id="file" type="file" accept=".xlsx,.xls" />
+          <div id="fileLabel" class="muted" style="margin-top:6px"></div>
+        </div>
+        <div>
+          <label>Start date (YYYY-MM-DD)</label>
+          <input id="date" type="date" />
+          <div class="muted" style="margin-top:6px">If no native date picker, enter YYYY-MM-DD.</div>
+        </div>
+      </div>
+
+      <div class="switch" style="margin-top:14px">
+        <div>
+          <div style="font-size:13px; font-weight:600">Alphabetize employee names</div>
+          <div class="muted">Sort rows by name before scheduling.</div>
+        </div>
+        <input id="alpha" type="checkbox" />
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px; margin-top:16px">
+        <button id="process" class="btn" disabled>Validate & Generate</button>
+        <div id="status" class="status muted">Ready</div>
+      </div>
+
+      <div id="issues" class="issues" style="display:none"></div>
+
+      <div class="muted" style="margin-top:10px">
+        Expected headers (any order, case-insensitive): Employees, Sex, Area, Mon off, Tue Off, Wed Off, Thurs Off, Fri Off, Sat Off, Sun Off
+      </div>
+    </div>
+
+    <div class="card" style="font-size:14px; color:#374151">
+      <div style="font-weight:600; margin-bottom:6px">Notes</div>
+      <ul>
+        <li>MRR/WRR alternate daily (respecting off-days).</li>
+        <li>“Bar 1” starts Outside Bar week 1 → Inside Bars week 2; “Bar 2” is the inverse.</li>
+        <li>Unassigned employees rotate through sections with sex-based filtering and a daily rotating priority.</li>
+        <li>Offline-capable after first load; will try multiple CDNs for SheetJS automatically.</li>
+      </ul>
+    </div>
+
+    <div class="footer">If you see only the title, your network likely blocked the library download.</div>
+  </div>
+
+  <script>
+    // --- Dynamic loader for SheetJS from multiple CDNs ---
+    (function loadSheetJS(urls, onload, onfail){
+      let i = 0;
+      function tryNext(){
+        if(i >= urls.length){ onfail && onfail(new Error('Failed to load SheetJS')); return; }
+        const s = document.createElement('script');
+        s.src = urls[i++];
+        s.async = true;
+        s.onload = onload;
+        s.onerror = tryNext;
+        document.head.appendChild(s);
+      }
+      tryNext();
+    })([
+      'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+      'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+    ], function(){
+      initApp();
+    }, function(err){
+      setStatus('Error: could not load Excel library','err');
+    });
+
+    // --- Helpers ---
+    const $ = (id) => document.getElementById(id);
+    const toLower = (v) => typeof v === 'string' ? v.trim().toLowerCase() : '';
+    const pad2 = (n) => String(n).padStart(2,'0');
+    const fmt = (d) => (d instanceof Date && !isNaN(d)) ? `${d.getFullYear()}-${d.getMonth()+1 < 9 ? '0' : ''}${d.getMonth()+1}-${d.getDate() < 10 ? '0' : ''}${d.getDate()}` : '';
+    function addDays(d, n) { const x = new Date(d.getTime()); x.setDate(x.getDate() + n); return x; }
+    function nextSundayDate(from = new Date()) { const day = from.getDay(); const delta = (7 - day) % 7; return addDays(from, delta); }
+    function setStatus(msg, type) { const el = $('status'); el.textContent = msg; el.className = 'status ' + (type || 'muted'); }
+
+    const WEEK_DAYS = ['Mon off','Tue off','Wed off','Thurs off','Fri off','Sat off','Sun off'];
+    const ALL_SECTIONS = [
+      'MRR 1','MRR 2','WRR 1','WRR 2',
+      'BOH M + Legacy','BOH W + Legacy',
+      'M Legacy + Projects','W Legacy + Projects',
+      'Section 1','Section 2 + tables','Section 3','Section 4','Section 5',
+      'Sports Book','Section 6','Section 7','Section 8','Section 9 + High limit'
+    ];
+    const MALE_ONLY = ['MRR 1','MRR 2','BOH M + Legacy','M Legacy + Projects'];
+    const FEMALE_ONLY = ['WRR 1','WRR 2','BOH W + Legacy','W Legacy + Projects'];
+
+    const REQUIRED = ['employees','sex','area', ...WEEK_DAYS.map(d=>d.toLowerCase())];
+
+    function initApp(){
+      $('date').value = fmt(nextSundayDate());
+      $('file').addEventListener('change', onFile);
+      $('process').addEventListener('click', handleProcess);
+      setStatus('Ready', 'muted');
+    }
+
+    function onFile(e) {
+      const f = e.target.files && e.target.files[0];
+      $('fileLabel').textContent = f ? ('Selected: ' + f.name) : '';
+      $('process').disabled = !f;
+      setStatus(f ? ('Loaded: ' + f.name) : 'Ready');
+      clearIssues();
+    }
+
+    function saveBlob(blob, filename) {
+      const supportsDownloadAttr = 'download' in HTMLAnchorElement.prototype;
+      if (supportsDownloadAttr) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+        return;
+      }
+      try {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const dataUrl = reader.result;
+          const win = window.open();
+          if (win) { win.document.location = dataUrl; }
+          else { window.location = dataUrl; }
+        };
+        reader.readAsDataURL(blob);
+      } catch (e) {
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+      }
+    }
+
+    async function parseEmployees(file) {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+      return rows; // raw rows; we'll normalize after header check
+    }
+
+    // ---------- Validation utilities ----------
+    function normalizeHeaderMap(firstRowObj){
+      const map = {};
+      for (const k of Object.keys(firstRowObj || {})) map[k.trim().toLowerCase()] = k;
+      const missing = REQUIRED.filter(h => !(h in map));
+      return { map, missing };
+    }
+
+    function parseBool(v){
+      const s = String(v).trim().toLowerCase();
+      if (!s) return false;
+      return ['y','yes','true','1','x'].includes(s);
+    }
+    function normSex(v){
+      const s = String(v).trim().toLowerCase();
+      if (['m','male'].includes(s)) return 'male';
+      if (['f','female','woman'].includes(s)) return 'female';
+      return null;
+    }
+    function normArea(v){
+      const s = String(v).trim().toLowerCase();
+      if (!s) return '';
+      const allowed = ['mrr','wrr','bar 1','bar 2'];
+      return allowed.includes(s) ? s : null;
+    }
+
+    function validateRows(rawRows, headerMap){
+      const errors = [];
+      const warnings = [];
+      const seenNames = new Set();
+      const clean = [];
+
+      rawRows.forEach((r, idx) => {
+        const rowNo = idx + 2; // +2 because header = row 1
+        const get = (h) => r[headerMap[h]] ?? '';
+
+        const name = String(get('employees')).trim();
+        if (!name) errors.push({row: rowNo, field: 'Employees', msg:'Name is required'});
+        const nameKey = name.toLowerCase();
+        if (name && seenNames.has(nameKey)) {
+          errors.push({row: rowNo, field:'Employees', msg:`Duplicate name "${name}"`});
+        } else if (name) seenNames.add(nameKey);
+
+        const sexRaw = get('sex');
+        const sex = normSex(sexRaw);
+        if (!sex) errors.push({row: rowNo, field:'Sex', msg:`Invalid sex "${sexRaw}" (use Male/Female)`});
+
+        const areaRaw = get('area');
+        const area = normArea(areaRaw);
+        if (area === null) errors.push({row: rowNo, field:'Area', msg:`Invalid area "${areaRaw}" (mrr|wrr|bar 1|bar 2 or blank)`});
+
+        const off = {};
+        for (const d of WEEK_DAYS){
+          off[d] = parseBool(get(d));
+        }
+
+        clean.push({ Employee: name, Sex: sex || '', Area: area || '', ...off });
+      });
+
+      // Cross-row/group checks
+      const dayOffTotals = Array(7).fill(0);
+      clean.forEach(e => WEEK_DAYS.forEach((d, i) => { if (e[d]) dayOffTotals[i]++; }));
+      const allOffIdx = dayOffTotals.findIndex(n => n === clean.length && clean.length>0);
+      if (allOffIdx !== -1){
+        errors.push({row:'-', field:'Staffing', msg:`All employees off on ${WEEK_DAYS[allOffIdx]} → schedule impossible`});
+      }
+
+      // Per-row consistency
+      clean.forEach((e, i) => {
+        const row = i + 2;
+        if (e.Area === 'mrr' && e.Sex === 'female'){
+          errors.push({row, field:'Area/Sex', msg:'MRR requires male; adjust Sex or Area'});
+        }
+        if (e.Area === 'wrr' && e.Sex === 'male'){
+          errors.push({row, field:'Area/Sex', msg:'WRR requires female; adjust Sex or Area'});
+        }
+        const offCount = WEEK_DAYS.reduce((n, d) => n + (e[d] ? 1 : 0), 0);
+        if (offCount > 4){
+          warnings.push({row, field:'Off-days', msg:`Unusually high off-days (${offCount})`});
+        }
+      });
+
+      return { clean, errors, warnings };
+    }
+
+    function validateStartDate(s){
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return 'Invalid format (YYYY-MM-DD)';
+      const d = new Date(s + 'T00:00:00');
+      if (isNaN(d)) return 'Invalid date';
+      // Optional Sunday enforcement:
+      // if (d.getDay() !== 0) return 'Start date must be a Sunday';
+      return null;
+    }
+
+    function renderIssues(list, type){
+      if (!list.length) return;
+      const box = $('issues');
+      box.style.display = '';
+      const title = type === 'err' ? 'Errors (fix these):' : 'Warnings (optional to fix):';
+      const items = list.slice(0, 50).map(e => `<li>Row ${e.row} – <strong>${e.field}</strong>: ${e.msg}</li>`).join('');
+      const more = list.length > 50 ? `<li>…and ${list.length-50} more.</li>` : '';
+      box.innerHTML += `<h4>${title}</h4><ul>${items}${more}</ul>`;
+    }
+
+    function clearIssues(){
+      const box = $('issues');
+      box.style.display = 'none';
+      box.innerHTML = '';
+    }
+
+    // ---------- Scheduling (unchanged logic) ----------
+    function buildSchedule(employees, startDateStr, alphaSort) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(startDateStr)) throw new Error('Invalid date. Use YYYY-MM-DD.');
+
+      const list = employees.slice();
+      if (alphaSort) list.sort((a,b) => String(a.Employee).localeCompare(String(b.Employee)));
+
+      const scheduleUnassigned = {};
+      ALL_SECTIONS.forEach(sec => scheduleUnassigned[sec] = Array(14).fill(false));
+      const schedule = list.map(e => [e.Employee, '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+      const findRow = (name) => schedule.find(r => r[0] === name);
+
+      // MRR
+      const mrr = list.filter(e => e.Area.includes('mrr'));
+      mrr.forEach((emp, idx) => {
+        const row = findRow(emp.Employee); if (!row) return;
+        let sectionIndex = idx % 2;
+        for (let i=0;i<14;i++) {
+          const sec = ['MRR 1','MRR 2'][sectionIndex];
+          row[i+1] = sec;
+          scheduleUnassigned[sec][i] = true;
+          sectionIndex = 1 - sectionIndex;
+        }
+        let secIdx = idx % 2;
+        for (let i=0;i<14;i++) {
+          const dayOffKey = WEEK_DAYS[i % 7];
+          if (emp[dayOffKey]) {
+            row[i+1] = 'Off';
+            const sec = ['MRR 1','MRR 2'][secIdx];
+            scheduleUnassigned[sec][i] = false;
+          }
+          secIdx = 1 - secIdx;
+        }
+      });
+
+      // WRR
+      const wrr = list.filter(e => e.Area.includes('wrr'));
+      wrr.forEach((emp, idx) => {
+        const row = findRow(emp.Employee); if (!row) return;
+        let sectionIndex = idx % 2;
+        for (let i=0;i<14;i++) {
+          const sec = ['WRR 1','WRR 2'][sectionIndex];
+          row[i+1] = sec;
+          scheduleUnassigned[sec][i] = true;
+          sectionIndex = 1 - sectionIndex;
+        }
+        let secIdx = idx % 2;
+        for (let i=0;i<14;i++) {
+          const dayOffKey = WEEK_DAYS[i % 7];
+          if (emp[dayOffKey]) {
+            row[i+1] = 'Off';
+            const sec = ['WRR 1','WRR 2'][secIdx];
+            scheduleUnassigned[sec][i] = false;
+          }
+          secIdx = 1 - secIdx;
+        }
+      });
+
+      // Unassigned
+      const unassigned = list.filter(e => !e.Area);
+      const fixed = ALL_SECTIONS.slice(0,7);
+      const rotating = ALL_SECTIONS.slice(7);
+      const available = unassigned.map((emp, idx) => {
+        const k = idx % rotating.length;
+        const rotated = rotating.slice(k).concat(rotating.slice(0,k));
+        const finals = fixed.concat(rotated);
+        const allowed = emp.Sex === 'male'
+          ? finals.filter(sec => !FEMALE_ONLY.includes(sec))
+          : finals.filter(sec => !MALE_ONLY.includes(sec));
+        return { name: emp.Employee, allowed: allowed.slice() };
+      });
+
+      const keys = ALL_SECTIONS.slice();
+      const fixedKeys = keys.slice(0,7);
+      const rotatingKeys = keys.slice(7);
+
+      for (let day=0; day<14; day++) {
+        const dayOffKey = WEEK_DAYS[day % 7];
+        const k = day % rotatingKeys.length;
+        const dayOrder = fixedKeys.concat(rotatingKeys.slice(k).concat(rotatingKeys.slice(0,k)));
+
+        for (let u=0; u<available.length; u++) {
+          const name = available[u].name;
+          const row = findRow(name);
+          const emp = unassigned.find(e => e.Employee === name);
+          if (!row || !emp) continue;
+          if (emp[dayOffKey]) { row[day+1] = 'Off'; continue; }
+
+          let placed = false;
+          for (let j=0; j<dayOrder.length; j++) {
+            const sec = dayOrder[j];
+            if (!scheduleUnassigned[sec][day]) {
+              const idxAllowed = available[u].allowed.indexOf(sec);
+              if (idxAllowed !== -1) {
+                row[day+1] = sec;
+                scheduleUnassigned[sec][day] = true;
+                available[u].allowed.splice(idxAllowed, 1);
+                placed = true;
+                break;
+              }
+            }
+          }
+          if (!placed) row[day+1] = row[day+1] || '';
+        }
+      }
+
+      // Bar 1 / Bar 2
+      const bar1 = list.filter(e => e.Area.includes('bar 1'));
+      const bar2 = list.filter(e => e.Area.includes('bar 2'));
+
+      bar1.forEach(emp => {
+        const row = findRow(emp.Employee); if (!row) return;
+        let sectionIndex = 0;
+        for (let i=0;i<14;i++) {
+          const sec = ['Outside Bar','Inside Bars'][sectionIndex];
+          row[i+1] = sec;
+          if ((i+1) % 7 === 0) sectionIndex = 1 - sectionIndex;
+        }
+        for (let i=0;i<14;i++) {
+          const dayOffKey = WEEK_DAYS[i % 7];
+          if (emp[dayOffKey]) row[i+1] = 'Off';
+        }
+      });
+
+      bar2.forEach(emp => {
+        const row = findRow(emp.Employee); if (!row) return;
+        let sectionIndex = 0;
+        for (let i=0;i<14;i++) {
+          const sec = ['Inside Bars','Outside Bar'][sectionIndex];
+          row[i+1] = sec;
+          if ((i+1) % 7 === 0) sectionIndex = 1 - sectionIndex;
+        }
+        for (let i=0;i<14;i++) {
+          const dayOffKey = WEEK_DAYS[i % 7];
+          if (emp[dayOffKey]) row[i+1] = 'Off';
+        }
+      });
+
+      const start = new Date(startDateStr);
+      const header = ['Employee'];
+      for (let i=0;i<14;i++) header.push(fmt(addDays(start, i)));
+      return { header, rows: schedule };
+    }
+
+    // ---------- Main handler ----------
+    async function handleProcess() {
+      clearIssues();
+      const fileInput = $('file');
+      const dateInput = $('date');
+      const alphaInput = $('alpha');
+      const f = fileInput.files && fileInput.files[0];
+      if (!f) { setStatus('Select an Excel file first.'); return; }
+
+      const dateErr = validateStartDate(dateInput.value);
+      if (dateErr) { setStatus(dateErr, 'err'); return; }
+
+      $('process').disabled = true;
+      setStatus('Validating...');
+      try {
+        const rawRows = await parseEmployees(f);
+        if (!rawRows.length) { setStatus('No rows found – check your sheet.', 'err'); $('process').disabled = false; return; }
+
+        const { map, missing } = normalizeHeaderMap(rawRows[0]);
+        if (missing.length){
+          setStatus('Missing headers.', 'err');
+          renderIssues(missing.map(h=>({row:1, field:'Header', msg:`Missing required column "${h}"`})), 'err');
+          $('process').disabled = false; return;
+        }
+
+        const { clean, errors, warnings } = validateRows(rawRows, map);
+        if (warnings.length) renderIssues(warnings, 'warn');
+        if (errors.length){
+          renderIssues(errors, 'err');
+          setStatus('Fix errors and re-upload.', 'err');
+          $('process').disabled = false; return;
+        }
+
+        setStatus('Validation passed. Generating...');
+        const result = buildSchedule(clean, dateInput.value, alphaInput.checked);
+
+        const aoa = [result.header].concat(result.rows);
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Schedule');
+        const out = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+        const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const base = (f.name || 'schedule').replace(/\.[^.]+$/, '');
+        const fname = base + '_schedule_' + $('date').value + '.xlsx';
+        saveBlob(blob, fname);
+        setStatus('Success: schedule downloaded.', 'ok');
+      } catch (e) {
+        console.error(e);
+        setStatus('Error: ' + (e && e.message ? e.message : e), 'err');
+      } finally {
+        $('process').disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
