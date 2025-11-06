@@ -10,41 +10,48 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="manifest" href="manifest.webmanifest">
 
-  <!-- Prevent stale HTML after refresh; SW will also enforce network-first -->
+  <!-- Prevent stale HTML after refresh; SW also enforces network-first -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
 
   <style>
     :root {
-      --bg: #f7f7f8; --card: #ffffff; --border: #e5e7eb; --text: #111827; --muted: #6b7280;
-      --accent: #2563eb; --success: #16a34a; --danger: #dc2626; --warn: #b45309;
-      --highlight-bg: #eef2ff; --highlight-border: #6366f1;
+      --bg:#f7f7f8; --card:#fff; --border:#e5e7eb; --text:#111827; --muted:#6b7280;
+      --accent:#2563eb; --success:#16a34a; --danger:#dc2626; --warn:#b45309;
+      --highlight-bg:#fef3c7; /* amber-100 */
+      --highlight-border:#d97706; /* amber-600 */
+      --example-bg:#eef2ff; --example-border:#6366f1;
     }
-    * { box-sizing: border-box; }
-    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background: var(--bg); color: var(--text); }
-    .container { max-width: 920px; padding: 24px; margin: 0 auto; }
-    h1 { font-size: 22px; margin: 0 0 16px; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); padding: 18px; margin: 14px 0; }
-    label { font-size: 13px; display: block; margin: 0 0 6px; color: var(--muted); }
-    input[type="file"], input[type="date"], input[type="text"] { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: #fff; font-size: 14px; }
-    .row { display: grid; grid-template-columns: 1fr; gap: 14px; }
-    @media (min-width: 640px) { .row { grid-template-columns: 1fr 1fr; } }
-    .switch { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; }
-    .muted { color: var(--muted); font-size: 12px; }
-    .btn { appearance: none; border: none; outline: none; cursor: pointer; padding: 10px 14px; border-radius: 10px; background: var(--accent); color: white; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
-    .btn:disabled { opacity: .5; cursor: not-allowed; }
-    .status { font-size: 14px; margin-left: 10px; white-space: pre-line; }
-    .status.ok { color: var(--success); }
-    .status.err { color: var(--danger); }
-    .status.warn { color: var(--warn); }
-    .status.muted { color: var(--muted); }
-    .footer { color: var(--muted); font-size: 12px; margin-top: 10px; }
-    .pill { display: inline-block; background: #eef2ff; color: #3730a3; padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;background:var(--bg);color:var(--text)}
+    .container{max-width:920px;padding:24px;margin:0 auto}
+    h1{font-size:22px;margin:0 0 16px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 1px 2px rgba(0,0,0,.04);padding:18px;margin:14px 0}
+    label{font-size:13px;display:block;margin:0 0 6px;color:var(--muted)}
+    input[type="file"],input[type="date"]{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--border);background:#fff;font-size:14px}
+    .row{display:grid;grid-template-columns:1fr;gap:14px}
+    @media (min-width:640px){.row{grid-template-columns:1fr 1fr}}
+    .switch{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--border);border-radius:14px;padding:12px 14px}
+    .muted{color:var(--muted);font-size:12px}
+    .btn{appearance:none;border:none;outline:none;cursor:pointer;padding:10px 14px;border-radius:10px;background:var(--accent);color:#fff;display:inline-flex;align-items:center;gap:8px;font-weight:600}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .status{font-size:14px;margin-left:10px;white-space:pre-line}
+    .status.ok{color:var(--success)} .status.err{color:var(--danger)} .status.warn{color:var(--warn)} .status.muted{color:var(--muted)}
+    .pill{display:inline-block;background:#eef2ff;color:#3730a3;padding:2px 8px;border-radius:999px;font-size:12px}
 
-    #inputGuide { display:block; transition: all 0.3s ease; background: var(--highlight-bg); border: 2px solid var(--highlight-border); border-radius:12px; padding:10px; font-size:13px; color:#111827; margin-top:12px; }
-    #inputGuide strong { color: var(--highlight-border); }
-    #inputGuide code { background:#e0e7ff; padding:2px 4px; border-radius:4px; }
+    /* High-visibility guide */
+    #inputGuide{display:block;transition:all .3s ease;background:var(--highlight-bg);border:2px solid var(--highlight-border);border-radius:12px;padding:12px;font-size:13px;color:#111827;margin-top:12px}
+    #inputGuide strong{color:var(--highlight-border)}
+    #inputGuide code{background:#fff; border:1px dashed var(--highlight-border);padding:2px 4px;border-radius:4px}
+
+    /* Example box */
+    .example{margin-top:10px;background:var(--example-bg);border:2px solid var(--example-border);border-radius:10px;padding:10px}
+    .example .title{font-weight:700;color:#3730a3}
+    .example pre{margin:6px 0 0;white-space:pre-wrap;font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;font-size:12px}
+
+    /* Sticky info */
+    .sticky{position:sticky;top:8px;z-index:2}
   </style>
 </head>
 <body>
@@ -66,40 +73,43 @@
 
       <div class="switch" style="margin-top:14px">
         <div>
-          <div style="font-size:13px; font-weight:600">Alphabetize employee names</div>
+          <div style="font-size:13px;font-weight:600">Alphabetize employee names</div>
           <div class="muted">Sort rows by name before scheduling.</div>
         </div>
         <input id="alpha" type="checkbox" />
       </div>
 
-      <div style="display:flex; align-items:center; gap:10px; margin-top:16px">
+      <div style="display:flex;align-items:center;gap:10px;margin-top:16px">
         <button id="process" class="btn" disabled>Process Schedule</button>
         <div id="status" class="status muted">Ready</div>
       </div>
     </div>
 
-    <div class="card" style="font-size:14px; color:#374151">
-      <div style="font-weight:600; margin-bottom:6px">Notes</div>
+    <div class="card" style="font-size:14px;color:#374151">
+      <div style="font-weight:600;margin-bottom:6px">Notes</div>
       <ul>
         <li>MRR/WRR alternate daily (respecting off-days).</li>
         <li>“Bar 1” starts Outside Bar week 1 → Inside Bars week 2; “Bar 2” is the inverse.</li>
         <li>Unassigned employees rotate through sections with sex-based filtering and a daily rotating priority.</li>
       </ul>
 
-      <div id="inputGuide">
-        <strong>Expected Input File Format:</strong><br>
-        The Excel file should include the following columns (any order, case-insensitive):<br>
-        <em>Employees, Sex, Area, Mon off, Tue Off, Wed Off, Thurs Off, Fri Off, Sat Off, Sun Off</em>.<br><br>
-        Example Row:<br>
-        <code>Jane Doe | Female | WRR |  |  | Wed |  |  |  | Sun</code>
+      <div id="inputGuide" class="sticky">
+        <strong>Expected Columns (any order, case-insensitive):</strong><br>
+        <em>Employees, Sex, Area, Mon off, Tue Off, Wed Off, Thurs Off, Fri Off, Sat Off, Sun Off</em>.
+        <div class="example">
+          <div class="title">Example (CSV/Excel view)</div>
+          <pre>Employees,Sex,Area,Mon off,Tue Off,Wed Off,Thurs Off,Fri Off,Sat Off,Sun Off
+Jane Doe,Female,WRR,,,Wed,,,Sun
+John Smith,Male,Bar 1,x,x,,,,,
+Ava Brown,Female,MRR,,x,,,x,,</pre>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
-    // --- Register a service worker that uses NETWORK-FIRST for HTML/JS/CSS ---
+    // --- Register service worker (network-first) ---
     if ('serviceWorker' in navigator) {
-      // Bust the URL a bit so the SW updates when this HTML changes.
       const swUrl = `./sw.js?v=${encodeURIComponent(document.lastModified)}`;
       navigator.serviceWorker.register(swUrl).catch(console.error);
     }
@@ -110,73 +120,87 @@
     const btn = document.getElementById('process');
     const statusEl = document.getElementById('status');
     const inputGuide = document.getElementById('inputGuide');
-
-    function gate() {
-      btn.disabled = !(fileEl.files && fileEl.files.length && dateEl.value);
-    }
+    function gate(){ btn.disabled = !(fileEl.files && fileEl.files.length && dateEl.value); }
     fileEl.addEventListener('change', gate);
     dateEl.addEventListener('input', gate);
 
-    // Your earlier normalization helpers (short form — keep your full version in your project)
+    // ---------- Normalization & header aliases ----------
     const DAY_KEYS = ["mon","tue","wed","thu","fri","sat","sun"];
     const HEADER_ALIASES = {
+      "employees":["employee","employees","name","full name"],
+      "sex":["sex","gender"],
+      "area":["area","section","assigned area"],
       "mon off":["mon off","monday off","mon_off","mon-off","off mon"],
       "tue off":["tue off","tuesday off","tues off","tue_off","tue-off","off tue"],
       "wed off":["wed off","wednesday off","weds off","wed_off","wed-off","off wed"],
-      "thu off":["thu off","thurs off","thursday off","thu_off","thu-off","off thu","off thurs"],
+      "thurs off":["thu off","thurs off","thursday off","thu_off","thu-off","off thu","off thurs"],
       "fri off":["fri off","friday off","fri_off","fri-off","off fri"],
       "sat off":["sat off","saturday off","sat_off","sat-off","off sat"],
-      "sun off":["sun off","sunday off","sun_off","sun-off","off sun"],
-      "employees":["employee","employees","name","full name"],
-      "sex":["sex","gender"],
-      "area":["area","section","assigned area"]
+      "sun off":["sun off","sunday off","sun_off","sun-off","off sun"]
     };
+    const REQUIRED_CANONICAL = [
+      "employees","sex","area","mon off","tue off","wed off","thurs off","fri off","sat off","sun off"
+    ];
 
-    function buildHeaderMap(rawHeaders) {
+    function norm(s){ return String(s||"").trim().toLowerCase(); }
+
+    // Map raw header texts -> canonical names (where possible)
+    function buildHeaderMap(rawHeaders){
       const map = {};
-      const norm = s => String(s||"").trim().toLowerCase();
       rawHeaders.forEach((h,i)=>{
         const hNorm = norm(h);
         let canonical = null;
-        for (const [canon, aliases] of Object.entries(HEADER_ALIASES)) {
+        for (const [canon, aliases] of Object.entries(HEADER_ALIASES)){
           if (aliases.includes(hNorm)) { canonical = canon; break; }
         }
-        if (!canonical) canonical = hNorm;
-        map[canonical] = i;
+        // If user already used canonical spelling, accept it
+        if (!canonical && REQUIRED_CANONICAL.includes(hNorm)) canonical = hNorm;
+        if (canonical) map[canonical] = i;
       });
       return map;
     }
 
-    function parseOff(val) {
-      const s = String(val ?? "").trim().toLowerCase();
+    // Validate headers BEFORE parsing rows
+    function validateHeaders(rawHeaders){
+      const headerMap = buildHeaderMap(rawHeaders);
+      const missing = REQUIRED_CANONICAL.filter(k => headerMap[k] == null);
+      return { ok: missing.length === 0, missing, headerMap };
+    }
+
+    function parseOff(val){
+      const s = norm(val);
       if (!s) return false;
-      const truths = new Set(["x","off","true","yes","y","1","sun","mon","tue","tues","wed","weds","thu","thur","thurs","fri","sat","sunday","monday","tuesday","wednesday","thursday","friday","saturday"]);
+      const truths = new Set(["x","off","true","yes","y","1",
+        "sun","mon","tue","tues","wed","weds","thu","thur","thurs","fri","sat",
+        "sunday","monday","tuesday","wednesday","thursday","friday","saturday"
+      ]);
       return truths.has(s);
     }
 
-    function getDayOffMap(row, headerMap) {
+    function getDayOffMap(row, headerMap){
       const dayOff = {};
-      const keyFor = d => `${d} off`;
-      const idxSun = headerMap["sun off"];
-      for (const d of DAY_KEYS) {
-        const colIndex = headerMap[keyFor(d)];
-        const val = colIndex != null ? row[colIndex] : "";
-        dayOff[d] = parseOff(val);
-      }
+      const idx = (k)=> headerMap[k];
+      dayOff.mon = parseOff(row[idx("mon off")] ?? "");
+      dayOff.tue = parseOff(row[idx("tue off")] ?? "");
+      dayOff.wed = parseOff(row[idx("wed off")] ?? "");
+      dayOff.thu = parseOff(row[idx("thurs off")] ?? "");
+      dayOff.fri = parseOff(row[idx("fri off")] ?? "");
+      dayOff.sat = parseOff(row[idx("sat off")] ?? "");
+      dayOff.sun = parseOff(row[idx("sun off")] ?? "");
       return dayOff;
     }
 
-    // Placeholder: you will have your XLSX parsing & scheduling here
-    async function parseWorkbookFromFileInput(fileInput) {
-      // Use your existing XLSX parsing. This is a stub so this file is self-contained.
-      // Return { headers: [...], dataRows: [[...],[...],...] }
-      return { headers: ["Employees","Sex","Area","Mon off","Tue Off","Wed Off","Thurs Off","Fri Off","Sat Off","Sun Off"], dataRows: [] };
+    // ---------- Placeholder: replace with your XLSX parsing ----------
+    async function parseWorkbookFromFileInput(fileInput){
+      // Use your real XLSX reader (e.g., SheetJS). For demo, read first row as headers.
+      // Return { headers:[...], dataRows:[[...], ...] }
+      throw new Error("Hook up XLSX parsing here");
     }
 
-    function scheduleTwoWeeks(headers, dataRows, startDate) {
-      const headerMap = buildHeaderMap(headers);
+    function scheduleTwoWeeks(headers, dataRows, startDate){
+      const { headerMap } = validateHeaders(headers); // safe: already validated
       const employees = dataRows.map(r => {
-        const name = String(r[headerMap["employees"]] ?? r[headerMap["employee"]] ?? "").trim();
+        const name = String(r[headerMap["employees"]] ?? "").trim();
         const sex = String(r[headerMap["sex"]] ?? "").trim().toLowerCase();
         const area = String(r[headerMap["area"]] ?? "").trim();
         const dayOff = getDayOffMap(r, headerMap);
@@ -189,56 +213,58 @@
         d.setDate(d.getDate()+i);
         const dayKey = DAY_KEYS[d.getDay()===0 ? 6 : d.getDay()-1]; // Mon=0..Sun=6
         const dayAssignments = [];
-        for (const emp of employees) {
-          if (emp.dayOff[dayKey]) continue; // <- critical guard
-          // ... your placement logic here ...
-          // dayAssignments.push({ name: emp.name, section: pick(emp) });
+        for (const emp of employees){
+          if (emp.dayOff[dayKey]) continue; // skip off-days
+          // ... placement logic ...
         }
-        out.push({ date: d.toISOString().slice(0,10), assignments: dayAssignments });
+        out.push({ date:d.toISOString().slice(0,10), assignments:dayAssignments });
       }
       return out;
     }
 
-    // Hide input guide once Process is clicked
-    window.addEventListener('DOMContentLoaded', () => {
-      if (btn && inputGuide) {
-        inputGuide.style.display = 'block';
-      }
-    });
-
-    // Process button handler with clearing inputs & ready state reset
+    // ---------- Process button ----------
     btn.addEventListener('click', async () => {
       statusEl.className = 'status';
-      statusEl.textContent = "Processing...";
+      statusEl.textContent = "Validating headers...";
       btn.disabled = true;
 
-      try {
-        // Example: plug in your real parser
-        // const { headers, dataRows } = await parseWorkbookFromFileInput(fileEl);
-        // const startDate = new Date(dateEl.value);
-        // const result = scheduleTwoWeeks(headers, dataRows, startDate);
-        // ... export or display ...
+      try{
+        // 1) Parse workbook (you wire this up)
+        const { headers, dataRows } = await parseWorkbookFromFileInput(fileEl);
 
-        // Hide the input guide once we've processed
+        // 2) HEADER VALIDATION (before reading rows)
+        const v = validateHeaders(headers);
+        if (!v.ok){
+          const msg = `Missing required column(s): ${v.missing.map(s => `"${s}"`).join(", ")}
+
+Expected (any order, case-insensitive):
+Employees, Sex, Area, Mon off, Tue Off, Wed Off, Thurs Off, Fri Off, Sat Off, Sun Off`;
+          statusEl.classList.add('err');
+          statusEl.textContent = msg;
+          // Keep the guide visible to show the example
+          btn.disabled = false;
+          return;
+        }
+
+        statusEl.textContent = "Processing...";
+        // 3) Run scheduler
+        const startDate = new Date(dateEl.value);
+        const result = scheduleTwoWeeks(headers, dataRows, startDate);
+        // ... export/display result here ...
+
+        // Hide the guide after success
         inputGuide.style.display = 'none';
-
         statusEl.classList.add('ok');
         statusEl.textContent = "✅ Schedule generated successfully";
-      } catch (e) {
+      }catch(e){
         console.error(e);
         statusEl.classList.add('err');
-        statusEl.textContent = "❌ Error processing file";
-      } finally {
-        // Clear file input so the same file can be re-selected immediately
+        statusEl.textContent = `❌ Error: ${e.message}`;
+      }finally{
+        // Clear inputs so the same file can be selected again
         fileEl.value = "";
-        // Optional: clear date to force explicit re-run
         dateEl.value = "";
-        // Return UI to ready state shortly
-        setTimeout(() => {
-          statusEl.className = 'status muted';
-          statusEl.textContent = "Ready";
-          gate();
-        }, 1500);
+        setTimeout(()=>{ statusEl.className='status muted'; statusEl.textContent='Ready'; btn.disabled=false; }, 1600);
       }
     });
   </script>
