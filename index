@@ -98,11 +98,15 @@
   </div>
 
   <script>
-    const processBtn = document.getElementById('process');
-    const inputGuide = document.getElementById('inputGuide');
-
-    processBtn.addEventListener('click', () => {
-      inputGuide.style.display = 'none';
+    window.addEventListener('DOMContentLoaded', () => {
+      const processBtn = document.getElementById('process');
+      const inputGuide = document.getElementById('inputGuide');
+      if (processBtn && inputGuide) {
+        inputGuide.style.display = 'block';
+        processBtn.addEventListener('click', () => {
+          inputGuide.style.display = 'none';
+        });
+      }
     });
   </script>
 </body>
