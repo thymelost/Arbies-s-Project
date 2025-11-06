@@ -6,7 +6,8 @@
   <title>Arbie Schedule Generator (Validated)</title>
 
   <!-- SheetJS (XLSX parser) -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.2/dist/xlsx.full.min.js"></script>
+  
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.2/dist/xlsx.full.min.js" defer></script>
 
   <!-- PWA meta -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -102,6 +103,23 @@ Ava Brown,Female,MRR,,x,,,x,,</pre>
       </div>
     </div>
   </div>
+  <script>
+  async function ensureXLSX() {
+    if (window.XLSX) return; // already loaded
+  
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = "https://cdn.jsdelivr.net/npm/xlsx@0.20.2/dist/xlsx.full.min.js";
+      s.onload = resolve;
+      s.onerror = () => reject(new Error("Failed to load SheetJS"));
+      document.head.appendChild(s);
+    });
+  
+    if (!window.XLSX) {
+      throw new Error("XLSX not available after load");
+    }
+  }
+  </script>
 
   <script>
     // --- Register service worker (network-first) ---
@@ -196,32 +214,26 @@ Ava Brown,Female,MRR,,x,,,x,,</pre>
 
     // ---------- XLSX parsing using SheetJS ----------
     async function parseWorkbookFromFileInput(fileInput){
+      await ensureXLSX(); // <-- make sure XLSX is present
+    
       const file = fileInput.files?.[0];
       if (!file) throw new Error("No file selected");
-
-      // Read file as ArrayBuffer
+  
       const data = await file.arrayBuffer();
-
-      // Parse workbook
-      const wb = XLSX.read(data, { type: "array" });
-
-      // Prefer a known sheet name if present; else first sheet
+      const wb = XLSX.read(data, { type: "array" });   // <-- XLSX uppercase
+    
       const preferred = ["Employees", "Roster", "Sheet1"];
       const sheetName = wb.SheetNames.find(n => preferred.includes(n)) || wb.SheetNames[0];
       if (!sheetName) throw new Error("No worksheets found");
-
+    
       const ws = wb.Sheets[sheetName];
-
-      // Convert to array-of-arrays; keep blanks as "", keep raw values
       const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: "" });
       if (!aoa.length) throw new Error("Worksheet is empty");
-
+    
       const headers = aoa[0].map(h => (typeof h === "string" ? h.trim() : String(h).trim()));
       const dataRows = aoa.slice(1);
-
       return { headers, dataRows };
     }
-
     function scheduleTwoWeeks(headers, dataRows, startDate){
       const { headerMap } = validateHeaders(headers);
       const employees = dataRows.map(r => {
