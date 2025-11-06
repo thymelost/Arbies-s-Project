@@ -70,6 +70,27 @@
           <input id="date" type="date" />
         </div>
       </div>
+<script>
+// --- Default date = first Sunday on/after today ---
+(function setDefaultStartDateToSunday(){
+  const dateEl = document.getElementById('date');
+  if (!dateEl) return;
+
+  const today = new Date();
+  // getDay(): 0=Sun, 1=Mon, ... 6=Sat
+  const offset = (7 - today.getDay()) % 7; // 0 if Sun, else days until next Sun
+  const target = new Date(today);
+  target.setDate(today.getDate() + offset);
+
+  // ISO date for <input type="date">
+  const iso = target.toISOString().slice(0,10);
+  dateEl.value = iso;
+
+  // If you want to ensure the date gate re-evaluates:
+  const evt = new Event('input', { bubbles: true });
+  dateEl.dispatchEvent(evt);
+})();
+</script>
 
       <div class="switch" style="margin-top:14px">
         <div>
