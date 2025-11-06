@@ -1,0 +1,7 @@
+{
+  "name": "Arbie Schedule Generator",
+  "short_name": "Arbie",
+  "start_url": "./",
+  "display": "standalone",
+  "icons": []
+}
