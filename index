@@ -19,6 +19,8 @@
       --success: #16a34a;
       --danger: #dc2626;
       --warn: #b45309;
+      --highlight-bg: #eef2ff;
+      --highlight-border: #6366f1;
     }
     * { box-sizing: border-box; }
     body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background: var(--bg); color: var(--text); }
@@ -41,12 +43,9 @@
     .footer { color: var(--muted); font-size: 12px; margin-top: 10px; }
     .pill { display: inline-block; background: #eef2ff; color: #3730a3; padding: 2px 8px; border-radius: 999px; font-size: 12px; }
 
-    .issues { margin-top: 10px; border: 1px dashed var(--border); border-radius: 12px; padding: 10px; max-height: 220px; overflow: auto; font-size: 13px; }
-    .issues h4 { margin: 0 0 8px; font-size: 13px; color: #111827; }
-    .issues ul { margin: 0; padding-left: 18px; }
-    .issues li { margin: 2px 0; }
-
-    #inputGuide { display:block; transition: all 0.3s ease; background:#f9fafb; border:1px solid var(--border); border-radius:12px; padding:10px; font-size:13px; color:#374151; margin-top:8px; }
+    #inputGuide { display:block; transition: all 0.3s ease; background: var(--highlight-bg); border: 2px solid var(--highlight-border); border-radius:12px; padding:10px; font-size:13px; color:#111827; margin-top:12px; }
+    #inputGuide strong { color: var(--highlight-border); }
+    #inputGuide code { background:#e0e7ff; padding:2px 4px; border-radius:4px; }
   </style>
 </head>
 <body>
@@ -87,6 +86,7 @@
         <li>“Bar 1” starts Outside Bar week 1 → Inside Bars week 2; “Bar 2” is the inverse.</li>
         <li>Unassigned employees rotate through sections with sex-based filtering and a daily rotating priority.</li>
       </ul>
+
       <div id="inputGuide">
         <strong>Expected Input File Format:</strong><br>
         The Excel file should include the following columns (any order, case-insensitive):<br>
