@@ -1,15 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.2/dist/xlsx.full.min.js"></script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Arbie Schedule Generator (Validated)</title>
 
+  <!-- SheetJS (XLSX parser) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.2/dist/xlsx.full.min.js"></script>
+
+  <!-- PWA meta -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="manifest" href="manifest.webmanifest">
 
+  <!-- Prevent stale HTML after refresh; SW also enforces network-first -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -119,7 +123,6 @@ Ava Brown,Female,MRR,,x,,,x,,</pre>
     // --- Default date = first Sunday (only on first run, unless user changes) ---
     (function setDefaultStartDateToSundayOnce(){
       if (!dateEl) return;
-      // store flag in localStorage to prevent resetting after first run
       if (localStorage.getItem('arbieUserSetDate')) return;
 
       const today = new Date();
@@ -129,7 +132,6 @@ Ava Brown,Female,MRR,,x,,,x,,</pre>
       const iso = target.toISOString().slice(0,10);
       dateEl.value = iso;
 
-      // if user changes date manually, remember that
       dateEl.addEventListener('input', () => {
         localStorage.setItem('arbieUserSetDate', 'true');
       });
@@ -192,32 +194,31 @@ Ava Brown,Female,MRR,,x,,,x,,</pre>
       return dayOff;
     }
 
-    // Reads the first worksheet and returns { headers: [...], dataRows: [[...], ...] }
-    async function parseWorkbookFromFileInput(fileInput) {
+    // ---------- XLSX parsing using SheetJS ----------
+    async function parseWorkbookFromFileInput(fileInput){
       const file = fileInput.files?.[0];
       if (!file) throw new Error("No file selected");
-    
-      // Read as ArrayBuffer for SheetJS
+
+      // Read file as ArrayBuffer
       const data = await file.arrayBuffer();
-    
+
       // Parse workbook
       const wb = XLSX.read(data, { type: "array" });
-    
-      // Pick first visible sheet (or just first)
-      const sheetName = wb.SheetNames[0];
+
+      // Prefer a known sheet name if present; else first sheet
+      const preferred = ["Employees", "Roster", "Sheet1"];
+      const sheetName = wb.SheetNames.find(n => preferred.includes(n)) || wb.SheetNames[0];
       if (!sheetName) throw new Error("No worksheets found");
+
       const ws = wb.Sheets[sheetName];
-    
-      // Convert to 2D array (header row preserved)
-      // raw = true keeps cell values as-is; defval = "" fills blanks
+
+      // Convert to array-of-arrays; keep blanks as "", keep raw values
       const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: "" });
-    
       if (!aoa.length) throw new Error("Worksheet is empty");
-    
-      // First row = headers, remaining = data rows
+
       const headers = aoa[0].map(h => (typeof h === "string" ? h.trim() : String(h).trim()));
       const dataRows = aoa.slice(1);
-    
+
       return { headers, dataRows };
     }
 
@@ -230,20 +231,23 @@ Ava Brown,Female,MRR,,x,,,x,,</pre>
         const dayOff = getDayOffMap(r, headerMap);
         return { name, sex, area, dayOff };
       });
+
       const out = [];
       for (let i=0;i<14;i++){
         const d = new Date(startDate);
         d.setDate(d.getDate()+i);
-        const dayKey = DAY_KEYS[d.getDay()===0 ? 6 : d.getDay()-1];
+        const dayKey = DAY_KEYS[d.getDay()===0 ? 6 : d.getDay()-1]; // Mon=0..Sun=6
         const dayAssignments = [];
         for (const emp of employees){
-          if (emp.dayOff[dayKey]) continue;
+          if (emp.dayOff[dayKey]) continue; // respect off-days
+          // ... placement logic goes here ...
         }
         out.push({ date:d.toISOString().slice(0,10), assignments:dayAssignments });
       }
       return out;
     }
 
+    // ---------- Process button ----------
     btn.addEventListener('click', async () => {
       statusEl.className = 'status';
       statusEl.textContent = "Validating headers...";
@@ -251,24 +255,30 @@ Ava Brown,Female,MRR,,x,,,x,,</pre>
 
       try{
         const { headers, dataRows } = await parseWorkbookFromFileInput(fileEl);
+
         const v = validateHeaders(headers);
         if (!v.ok){
           statusEl.classList.add('err');
-          statusEl.textContent = `Missing required columns:\n${v.missing.join(", ")}`;
+          statusEl.textContent = `Missing required columns:\n${v.missing.join(", ")}\n\nExpected: Employees, Sex, Area, Mon off, Tue Off, Wed Off, Thurs Off, Fri Off, Sat Off, Sun Off`;
           btn.disabled = false;
           return;
         }
+
         statusEl.textContent = "Processing...";
         const startDate = new Date(dateEl.value);
         const result = scheduleTwoWeeks(headers, dataRows, startDate);
+
         inputGuide.style.display = 'none';
         statusEl.classList.add('ok');
         statusEl.textContent = "✅ Schedule generated successfully";
+        // TODO: render or export `result` as needed
+
       }catch(e){
         console.error(e);
         statusEl.classList.add('err');
         statusEl.textContent = `❌ Error: ${e.message}`;
       }finally{
+        // Clear inputs for immediate re-run
         fileEl.value = "";
         dateEl.value = "";
         setTimeout(()=>{ statusEl.className='status muted'; statusEl.textContent='Ready'; btn.disabled=false; }, 1500);
